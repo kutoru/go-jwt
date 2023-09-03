@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<head>
+</head>
+
+<body>
+  <div class="content">
+    <span>The Auth button will send an auth request with the "random integer" as a GUID to the backend. On success it will return a response with new access and refresh tokens as cookies.</span>
+    <br>
+    <span>The Refresh button will send a refresh request to the backend with the latest acquired cookies. On success it will also return a response with new access and refresh tokens as cookies.</span>
+    <br>
+    <span>For additional response info check the backend's output.</span>
+    <br>
+    <input id="input" type="text" placeholder="Enter a random integer" />
+    <button onclick="auth()">Auth</button>
+    <button onclick="refresh()">Refresh</button>
+    <br>
+    <span id="info"></span>
+  </div>
+
+  <script>
+    const info = document.getElementById("info");
+
+    async function auth() {
+      info.innerHTML = "";
+
+      const input = document.getElementById("input").value;
+      const guid = parseInt(input);
+      if (isNaN(guid)) {
+        info.innerHTML = "Invalid integer";
+        return;
+      }
+
+      await fetch("http://localhost:4000/auth", {
+        method: "POST",
+        body: JSON.stringify({ guid: guid }),
+        credentials: "include"
+      })
+        .then(response => {
+          if (response.ok) {
+            info.innerHTML = "Response is OK";
+          } else {
+            info.innerHTML = "Response is not OK";
+          }
+        })
+        .catch(error => {
+          info.innerHTML = "Error, see console";
+          console.log(error);
+        });
+    }
+
+    function refresh() {
+      info.innerHTML = "";
+
+      fetch("http://localhost:4000/refresh", {
+        method: "GET",
+        credentials: "include"
+      })
+        .then(response => {
+          if (response.ok) {
+            info.innerHTML = "Response is OK";
+          } else {
+            info.innerHTML = "Response is not OK";
+          }
+        })
+        .catch(error => {
+          info.innerHTML = "Error, see console";
+          console.log(error);
+        });
+    }
+  </script>
+
+  <style>
+    * {
+      font-size: 30px;
+      background-color: rgb(25, 25, 25);
+      color: white;
+      font-family: sans-serif;
+    }
+    .content {
+      margin: 0 auto;
+      width: 1000px;
+    }
+    input, button, span {
+      margin: 5px;
+    }
+  </style>
+</body>
