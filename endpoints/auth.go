@@ -7,6 +7,7 @@ import (
 
 	"github.com/kutoru/go-jwt/models"
 	"github.com/kutoru/go-jwt/tokens"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Function that handles the auth route
@@ -24,10 +25,16 @@ func auth(w http.ResponseWriter, r *http.Request) {
 
 	// Creating tokens and setting them as cookies to the writer
 	err = tokens.CreateAndSetAsCookies(w, user.GUID)
-	if err != nil {
+	switch err.(type) {
+	case mongo.WriteException:
+		log.Printf("Could not create refresh token: %v\n", err)
+		http.Error(w, "GUID already exists", http.StatusBadRequest)
+		return
+	default:
 		log.Printf("Could not create tokens: %v\n", err)
 		http.Error(w, "Could not create token", http.StatusInternalServerError)
 		return
+	case nil:
 	}
 
 	// Writing the response

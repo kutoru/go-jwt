@@ -28,6 +28,14 @@ func CreateRefreshCookie(guid string, exp time.Time) (*http.Cookie, error) {
 		return nil, err
 	}
 
+	// MongoDB does not delete documents immediately. This is the fix for that
+	_, existingExp, err := getRefreshTokenFromDB(guid)
+	if err == nil {
+		if existingExp <= time.Now().Unix() {
+			RemoveRefreshTokenFromDB(guid)
+		}
+	}
+
 	hashedToken := string(hashedTokenBytes)
 	err = insertRefreshTokenIntoDB(guid, hashedToken, exp)
 	if err != nil {
@@ -56,29 +64,39 @@ func GetRefreshTokenInfo(r *http.Request, guid string) (string, int64, error) {
 		return "", 0, err
 	}
 
-	collection := db.GetTokenCollection()
-	filter := bson.M{"guid": guid}
-	result := collection.FindOne(db.CTX, filter)
-
-	var user models.User
-	err = result.Decode(&user)
+	token, exp, err := getRefreshTokenFromDB(guid)
 	if err != nil {
 		return "", 0, err
 	}
 
-	exp := user.EXP.Unix()
 	if exp <= time.Now().Unix() {
 		return "", 0, fmt.Errorf("token has expired")
 	}
 
 	err = bcrypt.CompareHashAndPassword(
-		[]byte(user.Token), []byte(cookie.Value),
+		[]byte(token), []byte(cookie.Value),
 	)
 	if err != nil {
 		return "", 0, err
 	}
 
-	return user.GUID, exp, nil
+	return guid, exp, nil
+}
+
+// Tries to fetch refresh token and its EXP unix time related to the GUID from the DB.
+// Returns error if the GUID doesn't exist or if something goes wrong.
+func getRefreshTokenFromDB(guid string) (string, int64, error) {
+	collection := db.GetTokenCollection()
+	filter := bson.M{"guid": guid}
+	result := collection.FindOne(db.CTX, filter)
+
+	var user models.User
+	err := result.Decode(&user)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return user.Token, user.EXP.Unix(), nil
 }
 
 // Inserts the refresh token into the DB
