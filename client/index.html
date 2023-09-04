@@ -5,31 +5,32 @@
 
 <body>
   <div class="content">
-    <span>The Auth button will send an auth request with the "random integer" as a GUID to the backend. On success it will return a response with new access and refresh tokens as cookies.</span>
+    <span>The Auth button will generate a GUID and send an auth request with it to the backend. On success it will return a response with new access and refresh tokens as cookies.</span>
     <br>
-    <span>The Refresh button will send a refresh request to the backend with the latest acquired cookies. On success it will also return a response with new access and refresh tokens as cookies.</span>
+    <span>The Refresh button will send a refresh request to the backend for the latest generated GUID. On success it will also return a response with new access and refresh tokens as cookies.</span>
     <br>
     <span>For additional response info check the backend's output.</span>
     <br>
-    <input id="input" type="text" placeholder="Enter a random integer" />
     <button onclick="auth()">Auth</button>
     <button onclick="refresh()">Refresh</button>
+    <br>
+    <span>Latest generated GUID:</span>
+    <br>
+    <span id="guid"></span>
     <br>
     <span id="info"></span>
   </div>
 
   <script>
     const info = document.getElementById("info");
+    const guidInfo = document.getElementById("guid");
 
     async function auth() {
       info.innerHTML = "";
+      guidInfo.innerHTML = "";
 
-      const input = document.getElementById("input").value;
-      const guid = parseInt(input);
-      if (isNaN(guid)) {
-        info.innerHTML = "Invalid integer";
-        return;
-      }
+      const guid = crypto.randomUUID();
+      guidInfo.innerHTML = guid
 
       await fetch("http://localhost:4000/auth", {
         method: "POST",
@@ -72,14 +73,14 @@
 
   <style>
     * {
-      font-size: 30px;
+      font-size: 25px;
       background-color: rgb(25, 25, 25);
       color: white;
       font-family: sans-serif;
     }
     .content {
       margin: 0 auto;
-      width: 1000px;
+      width: 800px;
     }
     input, button, span {
       margin: 5px;

@@ -15,7 +15,7 @@ import (
 )
 
 // Creates a cookie with a new refresh token as a value and inserts the hashed token into the DB
-func CreateRefreshCookie(guid int, exp time.Time) (*http.Cookie, error) {
+func CreateRefreshCookie(guid string, exp time.Time) (*http.Cookie, error) {
 	tokenBytes := make([]byte, 16)
 	_, err := rand.Read(tokenBytes)
 	if err != nil {
@@ -49,11 +49,11 @@ func CreateRefreshCookie(guid int, exp time.Time) (*http.Cookie, error) {
 	return cookie, nil
 }
 
-// Fetches the refresh token info from the DB and returns it if the token is valid. Otherwise returns an error
-func GetRefreshTokenInfo(r *http.Request, guid int) (int, int64, error) {
+// Fetches GUID and EXP unix time related to the refresh token from the DB and returns them if the token is valid. Otherwise returns an error
+func GetRefreshTokenInfo(r *http.Request, guid string) (string, int64, error) {
 	cookie, err := r.Cookie("refresh")
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	collection := db.GetTokenCollection()
@@ -63,26 +63,26 @@ func GetRefreshTokenInfo(r *http.Request, guid int) (int, int64, error) {
 	var user models.User
 	err = result.Decode(&user)
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	exp := user.EXP.Unix()
 	if exp <= time.Now().Unix() {
-		return 0, 0, fmt.Errorf("token has expired")
+		return "", 0, fmt.Errorf("token has expired")
 	}
 
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(user.Token), []byte(cookie.Value),
 	)
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	return user.GUID, exp, nil
 }
 
 // Inserts the refresh token into the DB
-func insertRefreshTokenIntoDB(guid int, hashedToken string, exp time.Time) error {
+func insertRefreshTokenIntoDB(guid string, hashedToken string, exp time.Time) error {
 	document := bson.M{
 		"token": hashedToken,
 		"guid":  guid,
@@ -95,7 +95,7 @@ func insertRefreshTokenIntoDB(guid int, hashedToken string, exp time.Time) error
 }
 
 // Removes document that has the guid
-func RemoveRefreshTokenFromDB(guid int) error {
+func RemoveRefreshTokenFromDB(guid string) error {
 	collection := db.GetTokenCollection()
 	filter := bson.M{"guid": guid}
 	_, err := collection.DeleteOne(db.CTX, filter)

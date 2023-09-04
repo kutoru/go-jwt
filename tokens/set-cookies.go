@@ -9,7 +9,7 @@ import (
 )
 
 // Tries to create both access and refresh tokens and set them to the writer as cookies
-func CreateAndSetAsCookies(w http.ResponseWriter, guid int) error {
+func CreateAndSetAsCookies(w http.ResponseWriter, guid string) error {
 	// Getting expiry time
 	exp := time.Now().Add(time.Duration(glb.EXP) * time.Second)
 

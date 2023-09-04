@@ -11,7 +11,7 @@ import (
 )
 
 // Creates a cookie with a new access token as a value
-func CreateAccessCookie(guid int, exp time.Time) (*http.Cookie, error) {
+func CreateAccessCookie(guid string, exp time.Time) (*http.Cookie, error) {
 	claims := jwt.MapClaims{}
 	claims["guid"] = guid
 	claims["exp"] = exp.Unix()
@@ -36,38 +36,38 @@ func CreateAccessCookie(guid int, exp time.Time) (*http.Cookie, error) {
 	return cookie, nil
 }
 
-// Parses the access token from the requests' cookies and returns its guid and exp if it is valid. Otherwise returns an error
-func GetAccessTokenInfo(r *http.Request) (int, int64, error) {
+// Parses the access token from the requests' cookies and returns its GUID and EXP unix time if it is valid. Otherwise returns an error
+func GetAccessTokenInfo(r *http.Request) (string, int64, error) {
 	cookie, err := r.Cookie("access")
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	token, err := jwt.Parse(cookie.Value, parseHelper)
 	if err != nil {
-		return 0, 0, err
+		return "", 0, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, 0, fmt.Errorf("token claims are invalid")
+		return "", 0, fmt.Errorf("token claims are invalid")
 	}
 
-	guid, ok := claims["guid"].(float64)
+	guid, ok := claims["guid"].(string)
 	if !ok {
-		return 0, 0, fmt.Errorf("guid is invalid")
+		return "", 0, fmt.Errorf("guid is invalid")
 	}
 
 	exp, ok := claims["exp"].(float64)
 	if !ok {
-		return 0, 0, fmt.Errorf("exp is invalid")
+		return "", 0, fmt.Errorf("exp is invalid")
 	}
 
 	if int64(exp) <= time.Now().Unix() {
-		return 0, 0, fmt.Errorf("token has expired")
+		return "", 0, fmt.Errorf("token has expired")
 	}
 
-	return int(guid), int64(exp), nil
+	return guid, int64(exp), nil
 }
 
 func parseHelper(token *jwt.Token) (interface{}, error) {
